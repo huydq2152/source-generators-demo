@@ -7,8 +7,9 @@ Console.WriteLine();
 
 var person = new Person
 {
-    FirstName = "Thomas",
-    LastName = "Huber"
+    FirstName = "Dang",
+    MiddleName = "Quang",
+    LastName = "Huy"
 };
 
 var personAsString = person.ToString();
