@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace WiredBrainCoffee.Generators;
@@ -36,7 +37,8 @@ public class ToStringGenerator : IIncrementalGenerator
             var first = true;
             foreach (var memberDeclarationSyntax in classDeclarationSyntax.Members)
             {
-                if (memberDeclarationSyntax is PropertyDeclarationSyntax propertyDeclarationSyntax)
+                if (memberDeclarationSyntax is PropertyDeclarationSyntax propertyDeclarationSyntax &&
+                    propertyDeclarationSyntax.Modifiers.Any(SyntaxKind.PublicKeyword))
                 {
                     if (first)
                     {

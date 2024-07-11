@@ -10,6 +10,8 @@ public partial class Person
 
     public string? LastName { get; set; }
 
+    internal string? InternalProperty { get; set; }
+
     //public override string ToString()
     //{
     //    var stringBuilder = new StringBuilder();
