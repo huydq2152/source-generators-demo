@@ -28,13 +28,15 @@ public class ToStringGenerator : IIncrementalGenerator
     private static ClassDeclarationSyntax? GetSemanticTarget(GeneratorSyntaxContext syntaxContext)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax)syntaxContext.Node;
-        foreach (var attributeListSyntax in classDeclarationSyntax.AttributeLists)
-        {
-            foreach (var attributeSyntax in attributeListSyntax.Attributes)
-            {
-                var attributeName = attributeSyntax.Name.ToString();
+        var classSymbol = syntaxContext.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
+        var attributeSymbol = syntaxContext.SemanticModel.Compilation
+            .GetTypeByMetadataName("WiredBrainCoffee.Generators.GenerateToStringAttribute");
 
-                if (attributeName == "GenerateToString" || attributeName == "GenerateToStringAttribute")
+        if(classSymbol is not null && attributeSymbol is not null)
+        {
+            foreach (var attributeData in classSymbol.GetAttributes())
+            {
+                if (SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass, attributeSymbol))
                 {
                     return classDeclarationSyntax;
                 }
