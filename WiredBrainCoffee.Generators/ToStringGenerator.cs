@@ -1,7 +1,9 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using WiredBrainCoffee.Generators.Model;
 
 namespace WiredBrainCoffee.Generators;
 
@@ -16,7 +18,7 @@ public class ToStringGenerator : IIncrementalGenerator
             .Where(static (target) => target is not null);
 
         context.RegisterSourceOutput(classes,
-            static (productionContext, syntax) => Execute(productionContext, syntax!));
+            static (productionContext, syntax) => Execute(productionContext, syntax));
 
         context.RegisterPostInitializationOutput(static (initializationContext) => PostInitializationOutput(initializationContext));
     }
@@ -25,20 +27,24 @@ public class ToStringGenerator : IIncrementalGenerator
     {
         return node is ClassDeclarationSyntax { AttributeLists.Count: > 0 };
     }
-    private static ClassDeclarationSyntax? GetSemanticTarget(GeneratorSyntaxContext syntaxContext)
+    private static ClassToGenerate? GetSemanticTarget(GeneratorSyntaxContext syntaxContext)
     {
         var classDeclarationSyntax = (ClassDeclarationSyntax)syntaxContext.Node;
         var classSymbol = syntaxContext.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
         var attributeSymbol = syntaxContext.SemanticModel.Compilation
             .GetTypeByMetadataName("WiredBrainCoffee.Generators.GenerateToStringAttribute");
 
-        if(classSymbol is not null && attributeSymbol is not null)
+        if (classSymbol is not null && attributeSymbol is not null)
         {
             foreach (var attributeData in classSymbol.GetAttributes())
             {
                 if (SymbolEqualityComparer.Default.Equals(attributeData.AttributeClass, attributeSymbol))
                 {
-                    return classDeclarationSyntax;
+                    var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
+                    var className = classSymbol.Name;
+                    var propertyNames = new List<string>();
+
+                    return new ClassToGenerate(namespaceName, className, propertyNames);
                 }
             }
         }
@@ -58,48 +64,46 @@ public class ToStringGenerator : IIncrementalGenerator
 }");
     }
 
-    private static void Execute(SourceProductionContext context, ClassDeclarationSyntax classDeclarationSyntax)
+    private static void Execute(SourceProductionContext context, ClassToGenerate? classToGenerate)
     {
-        if (classDeclarationSyntax.Parent is BaseNamespaceDeclarationSyntax namespaceDeclarationSyntax)
+        if(classToGenerate is null)
         {
-            var namespaceName = namespaceDeclarationSyntax.Name.ToString();
-            var className = classDeclarationSyntax.Identifier.Text;
-            var fileName = $"{namespaceName}.{className}.g.cs";
+            return;
+        }
 
-            var stringBuilder = new StringBuilder();
-            stringBuilder.Append($@"namespace {namespaceName}
+        var namespaceName = classToGenerate.NamespaceName;
+        var className = classToGenerate.ClassName;
+        var fileName = $"{namespaceName}.{className}.g.cs";
+
+        var stringBuilder = new StringBuilder();
+        stringBuilder.Append($@"namespace {namespaceName}
 {{
     partial class {className}
     {{
         public override string ToString()
         {{
             return $""");
-            var first = true;
-            foreach (var memberDeclarationSyntax in classDeclarationSyntax.Members)
+        var first = true;
+        foreach (var propertyName in classToGenerate.PropertyNames)
+        {
+            if (first)
             {
-                if (memberDeclarationSyntax is PropertyDeclarationSyntax propertyDeclarationSyntax &&
-                    propertyDeclarationSyntax.Modifiers.Any(SyntaxKind.PublicKeyword))
-                {
-                    if (first)
-                    {
-                        first = false;
-                    }
-                    else
-                    {
-                        stringBuilder.Append("; ");
-                    }
-                    var propertyName = propertyDeclarationSyntax.Identifier.Text;
-                    stringBuilder.Append($"{propertyName}: {{{propertyName}}}");
-                }
+                first = false;
+            }
+            else
+            {
+                stringBuilder.Append("; ");
             }
 
-            stringBuilder.Append($@""";
+            stringBuilder.Append($"{propertyName}: {{{propertyName}}}");
+        }
+
+        stringBuilder.Append($@""";
         }}
     }}
 }}
 ");
 
-            context.AddSource(fileName, stringBuilder.ToString());
-        }
+        context.AddSource(fileName, stringBuilder.ToString());
     }
 }
