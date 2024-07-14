@@ -72,9 +72,11 @@ public class ToStringGenerator : IIncrementalGenerator
 }");
     }
 
+    private static Dictionary<string, int> _countPerFileName = new();
+
     private static void Execute(SourceProductionContext context, ClassToGenerate? classToGenerate)
     {
-        if(classToGenerate is null)
+        if (classToGenerate is null)
         {
             return;
         }
@@ -83,8 +85,19 @@ public class ToStringGenerator : IIncrementalGenerator
         var className = classToGenerate.ClassName;
         var fileName = $"{namespaceName}.{className}.g.cs";
 
+        // file generate again every key stroke in the editor of file
+        if (_countPerFileName.ContainsKey(fileName))
+        {
+            _countPerFileName[fileName]++;
+        } 
+        else
+        {
+            _countPerFileName.Add(fileName, 1);
+        }
+
         var stringBuilder = new StringBuilder();
-        stringBuilder.Append($@"namespace {namespaceName}
+        stringBuilder.Append($@"// Generation count: {_countPerFileName[fileName]}
+namespace {namespaceName}
 {{
     partial class {className}
     {{
