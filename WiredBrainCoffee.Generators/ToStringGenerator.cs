@@ -44,6 +44,14 @@ public class ToStringGenerator : IIncrementalGenerator
                     var className = classSymbol.Name;
                     var propertyNames = new List<string>();
 
+                    foreach (var member in classSymbol.GetMembers())
+                    {
+                        if (member.Kind == SymbolKind.Property && member.DeclaredAccessibility == Accessibility.Public)
+                        {
+                            propertyNames.Add(member.Name);
+                        }
+                    }
+
                     return new ClassToGenerate(namespaceName, className, propertyNames);
                 }
             }

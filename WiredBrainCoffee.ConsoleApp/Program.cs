@@ -9,7 +9,9 @@ var person = new Person
 {
     FirstName = "Dang",
     MiddleName = "Quang",
-    LastName = "Huy"
+    LastName = "Huy",
+    InternalProperty = "InternalProperty",
+    PhoneNumber = "123456789"
 };
 
 var personAsString = person.ToString();
